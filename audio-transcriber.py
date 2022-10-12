@@ -1,6 +1,8 @@
-from tkinter import *
+import tkinter as tk
+#from time import sleep
+from tkinter import scrolledtext
 
-from os import listdir, rename
+from os import listdir, rename, remove
 #from tabnanny import verbose
 import pandas as pd
 from ast import literal_eval
@@ -14,10 +16,6 @@ from utils import clean_tokenize, match_vocabulay
 from sklearn.feature_extraction.text import TfidfVectorizer
 import whisper
 
-'''
-st.set_page_config(layout="wide")
-st.title('Text Received')
-'''
 
 def transcribe_waves(wave_files: list, audio_path: str):
 
@@ -47,6 +45,86 @@ def transcribe_waves(wave_files: list, audio_path: str):
     return(final_text)
 
 
+# START TKINTER MODULE 1 ---------------------------------------------------------
+clear_text_bool = False
+quit_session_bool = False
+
+#Creating a new window and configurations
+window = tk.Tk()
+window.title("Agent Assist")
+#window.minsize(width=100, height=90)
+window.geometry("1000x760+2300+50")
+
+my_text = 'APN As described in Update considered harmful!!!'
+# Title Label
+text_received_L = tk.Label(window, 
+        text = "Text Received",
+        font = ("Clibri", 20))
+text_received_L.grid(column = 0, pady = 2, padx = 10) 
+
+text_received = scrolledtext.ScrolledText(window, 
+                                      wrap = tk.WORD, 
+                                      width = 100, 
+                                      height = 10, 
+                                      font = ("Times New Roman", 15))
+text_received.grid(column = 0, pady = 0, padx = 0)
+
+
+text_tokens_L = tk.Label(window, 
+        text = "Tokens Received",
+        font = ("Times New Roman", 20))
+text_tokens_L.grid(column = 0, pady = 0, padx = 10)
+
+text_tokens = scrolledtext.ScrolledText(window, 
+                                      wrap =tk. WORD, 
+                                      width = 100, 
+                                      height = 3, 
+                                      font = ("Times New Roman", 15))
+text_tokens.grid(column = 0, pady = 0, padx = 10)
+
+
+text_questions_L = tk.Label(window, 
+        text = "FaQ candidate Question",
+        font = ("Times New Roman", 20))
+text_questions_L.grid(column = 0, pady = 0, padx = 10)
+
+text_questions = scrolledtext.ScrolledText(window, 
+                                      wrap = tk.WORD, 
+                                      width = 100, 
+                                      height = 14, 
+                                      font = ("Times New Roman", 15))
+text_questions.grid(column = 0, pady = 0, padx = 10)
+
+def pause_session():
+    #print(radio_state.get())
+    return radio_state.get()
+
+#Variable to hold on to which radio button value is checked.
+radio_state = tk.IntVar()
+radiobutton1 = tk.Radiobutton(text="STOP", value=0, variable=radio_state, command=pause_session)
+radiobutton2 = tk.Radiobutton(text="RUN", value=1, variable=radio_state, command=pause_session)
+radiobutton1.grid(column = 0, pady = 0, padx = 10)
+radiobutton2.grid(column = 0, pady = 0, padx = 10)
+
+
+def clear_text():
+    global clear_text_bool
+    clear_text_bool = True
+
+clear_text_button = tk.Button(window, text ="CLEAR TEXT", command = clear_text)
+clear_text_button.grid(column = 0, pady = 1, padx = 10)
+
+def quit_session():
+    global quit_session_bool
+    quit_session_bool = True
+
+quit_session_button = tk.Button(window, text ="QUIT SESSION", command = quit_session)
+quit_session_button.grid(column = 0, pady = 1, padx = 10)
+
+# END TKINTER MODULE 1 ---------------------------------------------------------
+
+
+
 data_path = './data/'
 audio_path = './audio/'
 
@@ -58,8 +136,6 @@ print('model loaded!!!')
 
 stop1 = pd.read_csv(data_path + 'stop_words.csv', names=['word'])
 stop_words = stop1['word'].values.tolist()
-
-#print(stop_words)
 
 # START/START  SAME CODE AS IN SPEECH - - generate questions vocabulary
 cisco_data = pd.read_csv(data_path + 'cisco_faq_cleaned.csv')
@@ -101,16 +177,29 @@ print('')
 print('Ready to Rock!!!')
 print('')
 final_text = ''
+sentence_one = ''
+response_list = []
+response_list_pretty = ''
 
 session_running = True
 
 while session_running:
 
     files = listdir(audio_path)
+
+    # Check if session is paused, if paused delete all .wav files in audio folder
+    if pause_session() == 0:
+        for file in files:
+            if '.wav' in file:
+                # Delete file
+                remove(audio_path + file)
+                files.remove(file)
+
     wave_files = []
     for file in files:
         if ('.wav' in file) and ('proc_' not in file):
             wave_files.append(file)
+
 
     if len(wave_files) > 0:
         
@@ -147,14 +236,25 @@ while session_running:
         # This is the sentence to be feed the tf-idf
         sentence_one = " ".join(dict(Counter(session_dict).most_common(10)))
 
+        sentence_one = ''
+        for (w, f) in Counter(tokenized_received).most_common(10):
+            sentence_one += w + '(' + str(f) + ') '
+
+
+
+
+
         print('TOKENS from sentence_one: ', sentence_one)
 
-        # SEND (CURL) SENTENCE TO FAQ_MODEL
-        headers = {'Content-Type': 'application/json'}
+        # if number of tokens greater than one -->>  SEND (CURL) SENTENCE TO FAQ_MODEL
+        #headers = {'Content-Type': 'application/json'}
 
-        r = requests.post(url='http://0.0.0.0:8000/predict', json={'text': sentence_one})
-
-        response_list = r.json()['forecast']
+        if sentence_one.count(' ') > 1:
+            
+            r = requests.post(url='http://0.0.0.0:8000/predict', json={'text': sentence_one})
+            response_list = r.json()['forecast']
+        else:
+            response_list = []
 
 
         for question in response_list:
@@ -163,17 +263,59 @@ while session_running:
 
 
         # SHOW THE RESULTS IN A BEAUTIFULL NICE WAY
+        response_list_pretty = ''
+        for item in response_list:
+            print('')
+            print(item)
+
+            response_list_pretty += ' Question Value: ' + '%.2f' % item['question_value'] + ' Question: ' + item['question'] + '\n' \
+                + ' Answer Value: ' + '%.2f' % item['model_answer_value'] + ' Answer: ' + item['model_answer'] + '\n' + '\n'
+
 
         # ------ NICE TO HAVE ------ 
 
+    # START TKINTER MODULE 2 ---------------------------------------------------------
 
-        '''
-        logtxtbox = st.empty()
-        logtxt = 'start'
-        logtxtbox.text_area("Logging: ",final_text, height = 500)
-        '''
+    text_received.configure(state ='normal')
+    text_received.delete(1.0, tk.END)
+    text_received.insert(tk.INSERT, final_text)
+    text_received.configure(state ='disabled')
 
 
+    text_tokens.configure(state ='normal')
+    text_tokens.delete(1.0, tk.END)
+    text_tokens.insert(tk.INSERT, sentence_one)
+    text_tokens.update_idletasks()
+    text_tokens.configure(state ='disabled')
+
+    text_questions.configure(state ='normal')
+    text_questions.delete(1.0, tk.END)
+    text_questions.insert(tk.INSERT, response_list_pretty)
+    #text_questions.update_idletasks()
+    text_questions.configure(state ='disabled')
+
+    if clear_text_bool:
+        final_text = ''
+        sentence_one = ''
+        response_list = []
+        response_list_pretty = ''
+        clear_text_bool = False
+
+    if quit_session_bool:
+        print('Bye Bye')
+        session_running = False
+
+
+
+    #print('radio used: ', radio_used())
+
+    #text.update()
+    window.update()
+
+#sleep(2)
+window.quit()
+#window.mainloop()
+        # END TKINTER MODULE 2 -----------------------------------------------------------
 
         # show final text in a window
         # show tokenized words from final text

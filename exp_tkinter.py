@@ -3,6 +3,11 @@ import tkinter as tk
 from time import sleep
 from tkinter import scrolledtext
 
+import webbrowser
+from tkHyperLinkManager import HyperlinkManager
+from functools import partial
+
+
 #Creating a new window and configurations
 window = tk.Tk()
 window.title("Agent Assist")
@@ -63,6 +68,7 @@ radiobutton2.grid(column = 0, pady = 0, padx = 10)
 clear_text_bool = False
 quit_session_bool = False
 
+
 def clear_text():
     global clear_text_bool
     clear_text_bool = True
@@ -77,6 +83,7 @@ def quit_session():
 quit_session_button = tk.Button(window, text ="QUIT SESSION", command = quit_session)
 quit_session_button.grid(column = 0, pady = 1, padx = 10)
 
+sleep(2)
 
 number = 0
 
@@ -91,6 +98,9 @@ while number < 100:
     text_received.configure(state ='normal')
     text_received.delete(1.0, tk.END)
     text_received.insert(tk.INSERT, my_text)
+
+    text_received.insert(tk.INSERT, 'this is the hiperlink', hyperlink.add(partial(webbrowser.open,"http://www.tutorialspoint.com")))
+
     text_received.configure(state ='disabled')
 
 

@@ -1,7 +1,6 @@
 import re
 
 
-
 def clean_tokenize(text: str, stop_words: list):
 
     # pre-process the new received text, similar to answer_title in cisco_data
@@ -12,10 +11,19 @@ def clean_tokenize(text: str, stop_words: list):
 
     # tokenize text
     tokenized = text.split(' ')
+
+    # remove dot (.)  if last char of token
+    tokenized_aux = []
+    for word in tokenized:
+        if (word[-1] == '.'):
+            word = word[:-1]
+        tokenized_aux.append(word)
+
     # remove stop words
-    tokenized = [word for word in tokenized if word not in stop_words]
+    tokenized = [word for word in tokenized_aux if word not in stop_words]
 
     return tokenized
+
 
 def match_vocabulay(lst: list, tf_idf_vectorizer):
 
@@ -27,3 +35,4 @@ def match_vocabulay(lst: list, tf_idf_vectorizer):
             new_lst.append(token)
     
     return new_lst
+    
