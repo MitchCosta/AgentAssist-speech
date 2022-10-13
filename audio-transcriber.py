@@ -7,6 +7,7 @@ from os import listdir, rename, remove
 import pandas as pd
 from ast import literal_eval
 import re
+from time import sleep
 
 #from urllib import request
 import requests
@@ -45,6 +46,29 @@ def transcribe_waves(wave_files: list, audio_path: str):
     return(final_text)
 
 
+def update_tkinter_text():
+
+    text_received.configure(state ='normal')
+    text_received.delete(1.0, tk.END)
+    text_received.insert(tk.INSERT, final_text)
+    text_received.configure(state ='disabled')
+
+
+    text_tokens.configure(state ='normal')
+    text_tokens.delete(1.0, tk.END)
+    text_tokens.insert(tk.INSERT, sentence_one)
+    text_tokens.update_idletasks()
+    text_tokens.configure(state ='disabled')
+
+    text_questions.configure(state ='normal')
+    text_questions.delete(1.0, tk.END)
+    text_questions.insert(tk.INSERT, response_list_pretty)
+    #text_questions.update_idletasks()
+    text_questions.configure(state ='disabled')
+
+    return
+
+    
 # START TKINTER MODULE 1 ---------------------------------------------------------
 clear_text_bool = False
 quit_session_bool = False
@@ -128,7 +152,7 @@ quit_session_button.grid(column = 0, pady = 1, padx = 10)
 data_path = './data/'
 audio_path = './audio/'
 
-model_name = "tiny"
+model_name = "small"  # tiny
 
 print('model whisper ', model_name, 'is loading...')
 model = whisper.load_model(model_name)
@@ -147,6 +171,9 @@ cisco_data = pd.read_csv(data_path + 'cisco_faq_cleaned.csv')
 
 # save the original question for use with the model
 cisco_data['question_original'] = cisco_data['answer_title']
+
+cisco_data.drop_duplicates(subset=['answer_title'], inplace=True)
+cisco_data = cisco_data.reset_index(drop=True)
 
 # join the list of paragraphs in one string
 cisco_data['answer_paragraphs'] = cisco_data['answer_paragraphs'].apply(literal_eval)
@@ -189,6 +216,12 @@ while session_running:
 
     # Check if session is paused, if paused delete all .wav files in audio folder
     if pause_session() == 0:
+        # pyaudio-speech-recorder.py takes max 15ms to save a recording to file
+        #(between open and close the file)
+        # Wait 50ms before deleting
+        sleep(0.05)
+
+
         for file in files:
             if '.wav' in file:
                 # Delete file
@@ -251,8 +284,16 @@ while session_running:
 
         if sentence_one.count(' ') > 1:
             
-            r = requests.post(url='http://0.0.0.0:8000/predict', json={'text': sentence_one})
-            response_list = r.json()['forecast']
+            try:
+                r = requests.post(url='http://13.210.49.59:8000/predict', json={'text': sentence_one}, timeout=3.0)
+                response_list = r.json()['forecast']
+
+            except requests.exceptions.RequestException as e:
+                sentence_one = 'Unable to connect to container. Please check if service is running'
+                #raise SystemExit(e)
+
+
+
         else:
             response_list = []
 
@@ -274,25 +315,12 @@ while session_running:
 
         # ------ NICE TO HAVE ------ 
 
-    # START TKINTER MODULE 2 ---------------------------------------------------------
+        # START TKINTER MODULE 2 ---------------------------------------------------------
 
-    text_received.configure(state ='normal')
-    text_received.delete(1.0, tk.END)
-    text_received.insert(tk.INSERT, final_text)
-    text_received.configure(state ='disabled')
+        update_tkinter_text()
 
 
-    text_tokens.configure(state ='normal')
-    text_tokens.delete(1.0, tk.END)
-    text_tokens.insert(tk.INSERT, sentence_one)
-    text_tokens.update_idletasks()
-    text_tokens.configure(state ='disabled')
 
-    text_questions.configure(state ='normal')
-    text_questions.delete(1.0, tk.END)
-    text_questions.insert(tk.INSERT, response_list_pretty)
-    #text_questions.update_idletasks()
-    text_questions.configure(state ='disabled')
 
     if clear_text_bool:
         final_text = ''
@@ -300,6 +328,8 @@ while session_running:
         response_list = []
         response_list_pretty = ''
         clear_text_bool = False
+        update_tkinter_text()
+
 
     if quit_session_bool:
         print('Bye Bye')

@@ -15,8 +15,9 @@ def clean_tokenize(text: str, stop_words: list):
     # remove dot (.)  if last char of token
     tokenized_aux = []
     for word in tokenized:
-        if (word[-1] == '.'):
-            word = word[:-1]
+        if len(word) > 1:
+            if (word[-1] == '.'):
+                word = word[:-1]
         tokenized_aux.append(word)
 
     # remove stop words
