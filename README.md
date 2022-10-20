@@ -1,4 +1,4 @@
-# AgentAssist-speech   (deployed)
+# AgentAssist-speech   (local)
 
 AgentAssist Solution is a POC about:
 
