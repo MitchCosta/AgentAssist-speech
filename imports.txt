@@ -1,9 +1,5 @@
 pip install pandas
 pip install sklearn
-pip install streamlit
-
-
-export DISPLAY=$(grep nameserver /etc/resolv.conf | awk '{print $2}'):0.0
-echo $DISPLAY
-
- uvicorn main:app --reload --workers 1 --host 0.0.0.0 --port 8000
+pip install Everything-Tkinter
+pip install requests
+pip install torch

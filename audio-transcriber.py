@@ -152,7 +152,7 @@ quit_session_button.grid(column = 0, pady = 1, padx = 10)
 data_path = './data/'
 audio_path = './audio/'
 
-model_name = "small"  # tiny
+model_name = "tiny"  # tiny
 
 print('model whisper ', model_name, 'is loading...')
 model = whisper.load_model(model_name)
@@ -285,7 +285,7 @@ while session_running:
         if sentence_one.count(' ') > 1:
             
             try:
-                r = requests.post(url='http://13.210.49.59:8000/predict', json={'text': sentence_one}, timeout=3.0)
+                r = requests.post(url='http://3.25.109.205:8000/predict', json={'text': sentence_one}, timeout=3.0)
                 response_list = r.json()['forecast']
 
             except requests.exceptions.RequestException as e:
